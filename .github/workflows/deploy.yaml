@@ -1,0 +1,56 @@
+# Deploy mdBook site to GitHub Pages
+name: Deploy mdBook site to Pages
+
+on:
+  # Runs on pushes targeting the lichtblick-documentation branch
+  push:
+    branches: ["lichtblick-documentation"]
+  workflow_dispatch:
+
+# Sets permissions for GITHUB_TOKEN
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Ensure only one deployment runs at a time
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install mdBook
+        run: |
+          mkdir bin
+          curl -sSL https://github.com/rust-lang/mdBook/releases/download/v0.4.37/mdbook-v0.4.37-x86_64-unknown-linux-gnu.tar.gz | tar -xz --directory=bin
+
+      - name: Setup GitHub Pages
+        id: pages
+        uses: actions/configure-pages@v4
+
+      - name: Build mdBook
+        run: bin/mdbook build
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3  # Updated to v3
+        with:
+          path: book
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest  # Use GitHub-hosted runner unless you specifically need self-hosted
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4  # Use the latest version
